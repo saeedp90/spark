@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جرقه — مدیریت کار و مقابله با اهمال</title>
+
+  <!-- فونت فارسی از Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- آیکون اپ -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
+
+  <!-- Manifest برای نصب PWA -->
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --card: #f8f9fa;
+      --primary: #e63946;
+      --border: #e0e0e0;
+      --success: #2a9d8f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --text: #f0f0f0;
+        --card: #1e1e1e;
+        --border: #333;
+      }
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin: 24px 0;
+      font-weight: 700;
+      font-size: clamp(1.5rem, 5vw, 2rem);
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .task {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      margin: 8px 0;
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .task-text {
+      flex: 1;
+      word-break: break-word;
+    }
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .actions button {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔥 جرقه</h1>
+
+    <div class="card">
+      <input type="text" id="taskInput" placeholder="کار جدید را بنویسید..." />
+      <button id="addTask">افزودن کار</button>
+    </div>
+
+    <div class="card">
+      <h2>کارهای امروز</h2>
+      <div id="taskList"></div>
+    </div>
+
+    <div class="card">
+      <button id="exportBtn">پشتیبان‌گیری (JSON)</button>
+      <button id="importBtn">بازیابی از فایل</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" />
+    </div>
+  </div>
+
+  <script>
+    // ذخیره با کلید مخصوص برای این اپ
+    const STORAGE_KEY = 'spark_tasks_v2';
+
+    // بارگذاری کارها
+    function loadTasks() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    // ذخیره کارها
+    function saveTasks(tasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    // نمایش کارها
+    function renderTasks() {
+      const tasks = loadTasks();
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+
+      tasks.forEach((task, index) => {
+        const div = document.createElement('div');
+        div.className = 'task';
+        div.innerHTML = `
+          <span class="task-text ${task.completed ? 'completed' : ''}">${task.text}</span>
+          <div class="actions">
+            <button onclick="toggleComplete(${index})">${task.completed ? '❌ بازگشت' : '✅ انجام شد'}</button>
+            <button onclick="deleteTask(${index})">🗑️ حذف</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // افزودن کار جدید
+    document.getElementById('addTask').addEventListener('click', () => {
+      const input = document.getElementById('taskInput');
+      const text = input.value.trim();
+      if (text) {
+        const tasks = loadTasks();
+        tasks.push({ text, completed: false });
+        saveTasks(tasks);
+        input.value = '';
+        renderTasks();
+      }
+    });
+
+    // تکمیل/لغو کار
+    window.toggleComplete = (index) => {
+      const tasks = loadTasks();
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks(tasks);
+      renderTasks();
+    };
+
+    // حذف کار
+    window.deleteTask = (index) => {
+      const tasks = loadTasks();
+      tasks.splice(index, 1);
+      saveTasks(tasks);
+      renderTasks();
+    };
+
+    // پشتیبان‌گیری
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const tasks = loadTasks();
+      const dataStr = JSON.stringify(tasks, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'spark-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // بازیابی
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const tasks = JSON.parse(event.target.result);
+            saveTasks(tasks);
+            renderTasks();
+            alert('✅ بازیابی با موفقیت انجام شد!');
+          } catch (err) {
+            alert('❌ فایل نامعتبر است.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // راه‌اندازی اولیه
+    renderTasks();
+
+    // ثبت PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(console.warn);
+    }
+  </script>
+</body>
+</html>
